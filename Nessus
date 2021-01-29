@@ -1,0 +1,83 @@
+Cuando se realiza la autenticación de Windows haciendo uso de TSC en algunas ocasiones vamos a encontrar errores de falla de autenticación.
+Mi consejo es realizar lo siguiente a partir de la recomendación de tenable:
+
+[WMI]
+1. Log on to another Windows host on the same subnet as the target. Any Windows OS 7+ will work, assuming it's not a Home/Starter edition.
+2. Click the start button, then type in "wbemtest" and hit enter. 
+3. Click "Connect..." and in the box that comes up, add \\[IP or hostname of the target host]\ before "root\cimv2" 
+
+For example, when the box comes up it will show: 
+root\cimv2 
+
+For IP address 10.0.0.1, you would change it to: 
+
+\\10.0.0.1\root\cimv2
+
+
+4. Under Credentials, enter the username and password of your scanning user. 
+5. Click Connect - if any errors come up, take screenshots. 
+6. For a successful connection, you should see under Namespace: 
+
+\\[IP address or hostname]\root\cimv2 
+
+7. If you get an error message, you can likely do a search to find information about what it means.
+
+Resolution
+[Testing from a Windows Host]
+
+Run all commands from an elevated Command prompt or PowerShell on a host in the same network as the target. Make sure this is not done on the target itself. If possible, use the scanner.
+Anonymous IPC$ login test
+
+Test the IPC$ share without a username by using the following command. This command is similar to how Nessus checks the share.
+Note: Change <Target_IP> to the target's IP address.
+
+net use \\<Target_IP>\ipc$ "" /user:""
+
+For example:
+
+User-added image
+If this returns "Failed to connect to the IPC$ share anonymously." then the following should be verified:
+
+    Ensure SMB is set up correctly
+    Double-check firewall settings
+
+SMB Log on Test
+
+This is how Nessus tests the credentials to make sure it has access to the system.
+
+Run the following commands from an elevated command prompt.
+Note: Replace <username> and <password> with the credentials the scan is using. Also, change <Target_IP> to the target's IP address.
+
+net use \\<Target_IP>\ipc$ /user:<username> <password>
+net use \\<Target_IP>\admin$ /user:<username> <password>
+
+User-added image
+These commands should return "The command completed successfully." If it does not, then:
+
+    Check the credentials.
+    Check the account has sufficient privileges.
+
+Remote Registry Test
+Run the following command to check if the remote registry is running.
+Note: Change <Target_IP> to the target's IP address.
+
+reg query \\x.x.x.x\hklm
+
+User-added image
+If this returns registry keys, the service is running and accessible.  If this returns "ERROR: The network path was not found." then the service is not running and must be enabled.
+Testing from a Linux Host
+
+The program smbclient can be used as an alternative method of testing if the Nessus scanner is running on a Linux system that is scanning the Windows-based host. To install smbclient, run the following command as root:
+
+yum install samba-client
+
+To test the IPC$ share without a username by using the following command. This command is similar to how Nessus checks the share.
+Note: Change <Target_IP> to the target's IP address.
+
+smbclient ///x.x.x.x/IPC$ -U Administrator password
+
+    If this returns "smb: \>", then the credentials and permissions work.
+    If this returns "session setup failed: NT_STATUS_LOGON_FAILURE", then:
+        Check the credentials.
+        Check the account has sufficient privileges.
+
